@@ -6,7 +6,7 @@ Graphics Course Fall 2024
 **Description/Instructions:** Assignment to play around with the fragment shader, and see whether you can create your own interesting scene or patterns.
 
 #### HW 2 [Link](https://anyazorin.github.io/graphics_f24/hw2)
-**Description/Instructions:** Ray tracing with spheres animation.
+**Description/Instructions:** Ray tracing with spheres animation. Sphere follow cursor.
 
 #### HW 3 [Link](https://anyazorin.github.io/graphics_f24/hw3)
 **Description/Instructions:** Build a matrix library for quadric surfaces and transformations. 
