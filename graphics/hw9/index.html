@@ -1,0 +1,213 @@
+<head>
+    <link rel="stylesheet" href="style.css">
+ </head>
+<body bgcolor=#ffffff>
+
+    <!! EXPLICITLY POSITION THE CANVAS TO WHERE WE WANT IT TO APPEAR ON THE SCREEN>
+    
+    <canvas id=canvas1 width=500 height=500 style="position:absolute;left:850;top:70;color:black"></canvas>
+    <canvas id=canvas2 width=500 height=500 style="position:absolute;left:350;top:70"></canvas>
+
+    <table><tr><td>
+    
+    <!! INTERACTIVE HTML BUTTONS>
+    <h1>Instructions</h1>
+    <h3>Make a spline using keypoints: add <br>keypoints by clicking on canvas</h3>
+    <h3>Start new spline using the New <br>Spline button</h3>
+    <h3>Turn on edit mode to move the keypoints</h3>
+    <h3>Turn on delete mode to delete points<br> by clicking them</h3>
+    <font size = 7>Editing Mode</font>
+    <br>
+    <label class="switch">
+   
+        <input id = "editToggle" type="checkbox">
+        <span class="slider round"></span>
+      </label>
+    <br>
+    <font size = 7>Delete Mode</font>
+    <br>
+    <label class="switch">
+        <input id = "editDelete" type="checkbox">
+        <span class="slider round"></span>
+      </label>
+    <br>
+    <button><font color=#00a0ff size=7 onmousedown=reset()>Reset</font></button> <br>
+    <button><font  size=10 onmousedown=newSpline()>New Spline</font></button> <br>
+    <br> <h2>A small gallery below</h2>
+    <img src="img1.png" alt="img1" width="400" height="400">
+    <img src="img2.png" alt="img1" width="400" height="400">
+    
+  
+
+</body>
+<script src=lib.js></script>
+ 
+<script>
+let ctx = canvas2.getContext('2d');
+ctx.fillStyle = 'black';
+ctx.fillRect(0,0,800,800);
+
+
+
+let editing = 0;
+let deleting = 0;
+let xCoords = [];
+let yCoords = [];
+
+let splitIndex = [];
+let draggingPointIndex = null; 
+
+
+
+const isPointClicked = (x, y, px, py, radius = 10) => {
+    return Math.hypot(x - px, y - py) <= radius;
+};
+// Place point
+canvas2.onmousedown = e => {
+    let mouseX = e.clientX - 350;
+    let mouseY = e.clientY - 70;
+    if (editing == 0 && deleting ==0){
+        xCoords.push(mouseX);
+        yCoords.push(mouseY);
+        console.log(xCoords, yCoords);
+    }
+    else if(deleting == 1){
+        for (let i = 0; i < xCoords.length; i++) {
+            if (isPointClicked(mouseX, mouseY, xCoords[i], yCoords[i])) {
+                xCoords.splice(i,1);
+                yCoords.splice(i,1);
+                console.log(splitIndex);
+                for (let j = 0; j<splitIndex.length; j++){
+                    if (splitIndex[j]>i){
+                        splitIndex[j]-=1;
+                    }
+    
+                }
+                console.log(splitIndex);
+             
+            }
+        }
+    }
+    else if (editing ==1){
+        for (let i = 0; i < xCoords.length; i++) {
+            if (isPointClicked(mouseX, mouseY, xCoords[i], yCoords[i])) {
+                draggingPointIndex = i;
+            }
+        }
+    }
+}
+
+canvas2.onmousemove = e => {
+    if (draggingPointIndex !== null) {
+        let mouseX = e.clientX - 350;
+        let mouseY = e.clientY - 70;
+        xCoords[draggingPointIndex] = mouseX;
+        yCoords[draggingPointIndex] = mouseY;
+    }
+};
+
+// Stop dragging on mouseup
+canvas2.onmouseup = () => {
+    draggingPointIndex = null;
+};
+
+// RESET BUTTONS + VIEWPOINT
+let reset = () => {
+    xCoords = [];
+    yCoords = [];
+    splitIndex = [];
+   
+}
+
+let newSpline = () => {
+    splitIndex.push(xCoords.length);
+}
+
+
+document.getElementById('editToggle').onchange = e => {
+    if (editing == 0) editing = 1;
+    else editing = 0;
+};
+
+document.getElementById('editDelete').onchange = e => {
+    if (deleting == 0) deleting = 1;
+    else deleting = 0;
+};
+
+
+
+let catmullRom = (K, t) => {
+    let n = K.length - 1, i = Math.floor(n * t), f = (n * t) % 1;
+    let A = K[Math.max(0, i-1)], B = K[i], C = K[i+1], D = K[Math.min(n, i+2)];
+    return ((((-A+3*B-3*C+D) * f + (2*A-5*B+4*C-D)) * f + (-A+C)) * f + 2*B) / 2;
+ }
+
+let drawSpline = (ctx) => {
+    if (xCoords.length < 2){
+        if(xCoords.length ==1){
+            ctx.beginPath();
+            ctx.arc(xCoords[0], yCoords[0], 5, 0, 2*Math.PI);
+            ctx.fillStyle = 'red';
+            ctx.fill();
+        }
+        else{
+            ctx.clearRect(0,0,800,800);
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0,0,800,800);
+        }
+        return;
+    } 
+    ctx.clearRect(0,0,800,800);
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0,0,800,800);
+    let steps = 100*xCoords.length;
+    for (let i = 0; i<xCoords.length; i++){
+        ctx.beginPath();
+        ctx.arc(xCoords[i], yCoords[i], 5, 0, 2*Math.PI);
+        ctx.fillStyle = 'red';
+        ctx.fill();
+    };
+    ctx.lineWidth = 3
+    ctx.strokeStyle = 'white';
+    ctx.beginPath();
+    let xStart = 0;
+    let yStart = 0;
+    for(let s = 0; s<=splitIndex.length;s++){
+        ctx.moveTo(xCoords[xStart], yCoords[yStart]);
+        if (s<splitIndex.length){
+            for (let t = 0; t < 1; t += 1 / steps){
+                let x = catmullRom(xCoords.slice(xStart,splitIndex[s]), t);
+                let y = catmullRom(yCoords.slice(yStart,splitIndex[s]), t);
+                ctx.lineTo(x, y);
+            }
+            xStart = splitIndex[s];
+            yStart = splitIndex[s];
+        }
+        else if (s==splitIndex.length){
+            for (let t = 0; t < 1; t += 1 / steps){
+                let v = catmullRom(xCoords.slice(xStart,xCoords.length), t);
+                let w = catmullRom(yCoords.slice(yStart,yCoords.length), t);
+                ctx.lineTo(v, w);
+            }
+        }
+    }   
+   ctx.stroke();
+}
+
+
+
+function drawFrame() {
+    requestAnimationFrame(drawFrame);
+
+    let time = Date.now() / 1000;
+    let t =Math.abs(Math.sin(0.5*time));
+    
+    let x_sphere = catmullRom(xCoords, t)/250-1;
+    let y_sphere = 1-catmullRom(yCoords, t)/250;
+    M.identity().S().move(x_sphere, y_sphere,0).scale(0.08,0.08,0.08).draw(Sphere(20), [1,0.2,0.2], 1).R();
+    drawSpline(ctx);    
+}
+requestAnimationFrame(drawFrame);
+    
+
+ </script>
